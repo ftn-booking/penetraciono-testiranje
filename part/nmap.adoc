@@ -1,0 +1,151 @@
+._Nmap_ koristi IP pakete na kreativne načine kako bi odredio:
+* Koji uređaji su dostupni na mreži
+* Koje servise (naziv aplikacije i verzija) ti uređaji nude
+* Koje operativne sisteme (i njihove verzije) koriste
+* Koji tipovi firewall-a su u upotrebi
+
+Iako se _Nmap_ većinom koristi za potrebe provere bezbednosti,
+mnogi administratori ga pronalaze korisnim za rutinske poslove,
+kao što je monitoring uređaja i servisa.
+
+=== Skeniranje servera
+
+Pre svega, potrebno je skenirati server kako bi se otkrilo koje servise on nudi.
+
+.U te svrhe, `nmap` se poziva u svom osnovnom obliku:
+```bash
+nmap {target specification}
+```
+
+Zbog uštede vremena, _Nmap_ podrazumevano skenira samo najčešće korišćenih 1000 portova.
+Da bi se skenirali i ostali portovi potrebno je dodati opciju `-p-`.
+
+.Konkretno:
+```bash
+nmap -p- localhost
+```
+
+.Rezultat Nmap skeniranja:
+....
+Starting Nmap 7.70 ( https://nmap.org ) at 2018-06-27 13:38 CEST
+Nmap scan report for localhost (127.0.0.1)
+Host is up (0.000062s latency).
+Other addresses for localhost (not scanned): ::1
+Not shown: 65528 closed ports
+PORT     STATE SERVICE
+22/tcp   open  ssh
+139/tcp  open  netbios-ssn
+445/tcp  open  microsoft-ds
+631/tcp  open  ipp
+8080/tcp open  http-proxy
+8085/tcp open  unknown
+8095/tcp open  unknown
+
+Nmap done: 1 IP address (1 host up) scanned in 1.85 seconds
+....
+
+_Nmap_ je pronašao servise od interesa na portovima `8080`, `8085` i `8095`.
+Za sva naredna skeniranja koristićemo opciju `-p8080,8085,8095`.
+
+=== Detekcija servisa i verzije
+
+Rezultat prethodnog skeniranja je pokazao otvorene portove i pretpostavio servise koji su pokrenuti na njima.
+Pretpostavka je napravljena pomoću interne baze koju _Nmap_ poseduje.
+U bazi je naveden najčešći naziv servisa koji je pokrenut na datom portu.
+
+Može se zaključiti da takva pretpostavka nije ispravna u našem slučaju gde su servisi pokrenuti na nestandardnim portovima.
+
+.Upotrebom opcije `-A`, _Nmap_ pokušava da odredi:
+* Protokol kojim servis komunicira
+* Naziv aplikacije
+* Broj verzije
+* Tip uređaja
+* Operativni sistem
+
+.Konkretan `nmap` poziv:
+```bash
+nmap -p8080,8085,8095 -A localhost
+```
+
+==== Rezultati detekcije
+
+.Deo rezultata:
+....
+8095/tcp open  http           Node.js Express framework
+|_http-title: Booking
+
+Device type: general purpose
+Running: Linux 3.X|4.X
+OS CPE: cpe:/o:linux:linux_kernel:3 cpe:/o:linux:linux_kernel:4
+OS details: Linux 3.8 - 4.14
+Network Distance: 0 hops
+
+Nmap done: 1 IP address (1 host up) scanned in 27.01 seconds
+....
+
+_Nmap_ je uspešno otkrio da korisnička aplikacija koristi _Node.js_ sa _Express_ bibliotekom.
+Takođe, otkrio je da se radi o _GNU/Linux_ operativnom sistemu, međutim pogrešio je verziju kernela.
+
+```bash
+uname -r
+```
+
+.Tačna verzija kernela:
+....
+4.17.2-1-ARCH
+....
+
+.Drugi deo rezultata detekcije:
+....
+PORT     STATE SERVICE        VERSION
+8080/tcp open  ssl/http-proxy
+| fingerprint-strings:
+|   DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, RPCCheck, RTSPRequest, SSLSessionReq:
+|     HTTP/1.1 400
+|     Date: Wed, 27 Jun 2018 12:33:19 GMT
+|     Connection: close
+|   GetRequest:
+|     HTTP/1.1 404
+|     X-Content-Type-Options: nosniff
+|     X-XSS-Protection: 1; mode=block
+|     Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+|     Pragma: no-cache
+|     Expires: 0
+|     Strict-Transport-Security: max-age=31536000 ; includeSubDomains
+|     X-Frame-Options: SAMEORIGIN
+|     Content-Type: application/json;charset=UTF-8
+|     Date: Wed, 27 Jun 2018 12:33:19 GMT
+|     Connection: close
+|     {"timestamp":"2018-06-27T12:33:19.565+0000","status":404,"error":"Not Found","message":"No message available","path":"/"}
+|   HTTPOptions:
+|     HTTP/1.1 404
+|     X-Content-Type-Options: nosniff
+|     X-XSS-Protection: 1; mode=block
+|     Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+|     Pragma: no-cache
+|     Expires: 0
+|     Strict-Transport-Security: max-age=31536000 ; includeSubDomains
+|     X-Frame-Options: SAMEORIGIN
+|     Content-Type: application/json;charset=UTF-8
+|     Date: Wed, 27 Jun 2018 12:33:19 GMT
+|     Connection: close
+|_    {"timestamp":"2018-06-27T12:33:19.771+0000","status":404,"error":"Not Found","message":"No message available","path":"/"}
+|_http-cors: HEAD GET POST PUT DELETE TRACE OPTIONS PATCH
+|_http-title: Site doesn't have a title (application/json;charset=UTF-8).
+| ssl-cert: Subject: commonName=server/organizationName=FTN-Booking/stateOrProvinceName=Serbia/countryName=RS
+| Not valid before: 2018-06-14T12:59:06
+|_Not valid after:  2019-06-14T12:59:06
+|_ssl-date: 2018-06-27T12:33:22+00:00; 0s from scanner time.
+....
+
+NOTE: sličan ispis dobije se i za port `8085`
+
+Može se primetiti da Nmap nije uspeo da detektuje _Spring Boot_ aplikaciju odnosno _Apache Tomcat_ server.
+
+=== Sprečavanje skeniranja
+
+Da bi se skeniranje sprečilo, može se koristiti firewall.
+
+Jedna opcija je dodatni modul za _iptables_ pod nazivom _PSD_.
+Princip na kojem radi _PSD_ je jednostavan—ukoliko je broj zahteva sa jedne adrese veći od dozvoljenog praga,
+tada je ta IP adresa klasifikovana kao port skener.
