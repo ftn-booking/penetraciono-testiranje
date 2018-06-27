@@ -1,0 +1,44 @@
+= Bezbednost: Penetraciono testiranje web aplikacija i servera
+Tim 2, računarstvo i automatika 2014
+:doctype: book
+:lang: sr_Latn
+include::locale/attributes.adoc[]
+:toc:
+:icons: font
+:data-uri:
+ifndef::backend-pdf[:source-highlighter: highlightjs]
+ifdef::backend-pdf[:source-highlighter: rouge]
+:sectanchors:
+:sectnums:
+:show-link-uri:
+
+:sectnums!:
+[preface]
+== Uvod
+
+.Potrebno je sprovesti penetraciono testiranje web aplikacija i servera upotrebom sledećih alata:
+. _Nmap_ (GPL-v2 licenca)
+. _Nikto_ (GPL-v3 licenca)
+
+
+.Web aplikacije od interesa su pokrenute na sledećim portovima:
+`8080`:: back-end aplikacija
+`8085`:: agentska aplikacija
+`8095`:: korisnička aplikacija
+
+:sectnums:
+== _Nmap_
+
+include::part/nmap.adoc[]
+
+== _Nikto_
+
+include::part/nikto.adoc[]
+
+////
+[appendix]
+== Zaključak
+
+[appendix]
+== Literatura
+////
