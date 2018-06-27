@@ -1,0 +1,67 @@
+._Nikto_ je skener web servera koji pronalazi potencijalne probleme kao što su:
+* Pogrešna konfiguracija servera i softvera
+* Podrazumevane datoteke i programi
+* Nesigurne datoteke i programi
+* Zastarele verzije servera i programa
+
+._Nikto_ se u osnovnom obliku pokreće na sledeći način:
+```bash
+nikto -host HOSTNAME -port PORT
+```
+
+.Odnosno, konkretno:
+```bash
+nikto -host localhost -port 8080,8085,8095
+```
+
+.Rezultat za port `8080`
+----
+---------------------------------------------------------------------------
++ Target IP:          127.0.0.1
++ Target Hostname:    localhost
++ Target Port:        8080
+---------------------------------------------------------------------------
++ SSL Info:        Subject:  /emailAddress=ftn.hps@gmail.com/C=RS/ST=Serbia/L=Novi Sad/O=FTN-Booking/OU=Team2/CN=server
+                   Ciphers:  ECDHE-RSA-AES256-GCM-SHA384
+                   Issuer:   /emailAddress=ftn.hps@gmail.com/C=RS/ST=Serbia/L=Novi Sad/O=FTN-Booking/OU=Team2/CN=server
++ Start Time:         2018-06-27 15:13:12 (GMT2)
+---------------------------------------------------------------------------
++ Server: No banner retrieved
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Hostname 'localhost' does not match certificate's names: server <1>
++ Allowed HTTP Methods: GET, HEAD, POST, PUT, DELETE, OPTIONS <2>
++ OSVDB-397: HTTP method ('Allow' Header): 'PUT' method could allow clients to save files on the web server. <2>
++ OSVDB-5646: HTTP method ('Allow' Header): 'DELETE' may allow clients to remove files on the web server. <2>
++ 7375 requests: 0 error(s) and 4 item(s) reported on remote host
++ End Time:           2018-06-27 15:15:17 (GMT2) (125 seconds)
+----
+<1> Problem postoji zato što je server pokrenut na localhost-u.
+<2> Sve HTTP metode su potrebne zato što se radi o REST servisu.
+
+NOTE: sličan ispis dobije se i za port `8085`
+
+.Rezultat za port `8095`
+----
+---------------------------------------------------------------------------
++ Target IP:          127.0.0.1
++ Target Hostname:    localhost
++ Target Port:        8095
++ Start Time:         2018-06-27 15:15:17 (GMT2)
+---------------------------------------------------------------------------
++ Server: No banner retrieved
++ Retrieved x-powered-by header: Express <1>
++ Server leaks inodes via ETags, header found with file /, fields: 0xW/fb7 0x16436b18afd <2>
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ 14886 requests: 0 error(s) and 2 item(s) reported on remote host
++ End Time:           2018-06-27 15:15:41 (GMT2) (24 seconds)
+---------------------------------------------------------------------------
+----
+<1> Potencijalni problem, zato što napadač zna koja biblioteka je korišćena
+<2> Lažno pozitivna informacija koju _Nikto_ generiše ukoliko ETag header sadrži `-`.
+
+Problem `<1>` se može rešiti dodatnom konfiguracijom korisničke aplikacije.
+
+.Preciznije, potrebno je dodati:
+```javascript
+app.disable('x-powered-by');
+```
